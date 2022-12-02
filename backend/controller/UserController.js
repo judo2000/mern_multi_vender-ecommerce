@@ -35,14 +35,21 @@ exports.loginUser = catchAsyncErrors(async (req, res, next) => {
 
   if (!user) {
     return next(
-      new ErrorHandler('User is not find with this email & password', 401)
+      new ErrorHandler(
+        'Invalid credentials.  Please check your email and password and try again.',
+        401
+      )
     );
   }
+
   const isPasswordMatched = await user.comparePassword(password);
 
   if (!isPasswordMatched) {
     return next(
-      new ErrorHandler('User is not find with this email & password', 401)
+      new ErrorHandler(
+        'Invalid credentials.  Please check your email and password and try again.',
+        401
+      )
     );
   }
 
@@ -145,4 +152,120 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   await user.save();
 
   sendToken(user, 200, res);
+});
+
+// Get user profile details
+exports.userDetails = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Update user password
+exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select('+password');
+
+  const isPasswordMatched = await user.comparePassword(req.body.oldPassword);
+
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler('Old password is incorrect', 400));
+  }
+
+  if (req.body.newPassword !== req.body.confirmPassword) {
+    return next(
+      new ErrorHandler('Passwords do not match. please try again.', 400)
+    );
+  }
+
+  user.password = req.body.newPassword;
+
+  await user.save();
+
+  sendToken(user, 200, res);
+});
+
+// Update user profile
+exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
+  const newUserData = {
+    first_name: req.body.first_name,
+    last_name: req.body.last_name,
+    email: req.body.email,
+  };
+  // we will add cloudinary when we get to the frontend
+  // then we will give conditions for updating the avitar.
+
+  const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Admin --- Get all users
+exports.getAllUsers = catchAsyncErrors(async (req, res, next) => {
+  const users = await User.find();
+
+  res.status(200).json({
+    success: true,
+    users,
+  });
+});
+
+// Admin -- Get single user details
+exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(new ErrorHandler('User not found', 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Admin - Change user role
+exports.updateUserInfo = catchAsyncErrors(async (req, res, next) => {
+  const newUserData = {
+    first_name: req.body.first_name,
+    last_name: req.body.last_name,
+    email: req.body.email,
+    role: req.body.role,
+  };
+
+  const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Admin - Delete user
+exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
+  // remove cloudinary avitar
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(new ErrorHandler('User not found', 404));
+  }
+
+  await user.remove();
+
+  res.status(200).json({
+    success: true,
+    message: 'User deleted successfully',
+  });
 });

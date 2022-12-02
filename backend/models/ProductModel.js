@@ -52,7 +52,7 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Please add the number you have in stock.'],
     maxLength: [4, 'Number in stock cannot exceed 4 characters.'],
   },
-  numberOfReviews: {
+  numOfReviews: {
     type: Number,
     default: 0,
   },
@@ -63,7 +63,11 @@ const productSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
       },
-      name: {
+      first_name: {
+        type: String,
+        required: true,
+      },
+      last_name: {
         type: String,
         required: true,
       },
